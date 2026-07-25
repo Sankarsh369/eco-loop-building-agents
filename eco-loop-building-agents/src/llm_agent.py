@@ -1,8 +1,16 @@
 from __future__ import annotations
 import os
 import json
+import sys
 import openai
 from energyplus_wrapper import ControlAction, Telemetry
+
+# Route control decisions directly through the MCP Server tool functions
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+try:
+    from mcp_server import set_zone_setpoint
+except ImportError:
+    set_zone_setpoint = None
 
 SYSTEM_PROMPT = """\
 You are an AI building energy optimization agent. You control the HVAC heating and cooling setpoints of a building zone to minimize energy consumption and grid carbon emissions while keeping occupants comfortable.
@@ -110,6 +118,18 @@ class LLMAgent:
                 for tool_call in message.tool_calls:
                     if tool_call.function.name == "set_zone_setpoint":
                         args = json.loads(tool_call.function.arguments)
+                        
+                        # Load-bearing MCP Tool Routing
+                        if set_zone_setpoint is not None:
+                            try:
+                                set_zone_setpoint(
+                                    zone=args["zone"],
+                                    setpoint_type=args["setpoint_type"],
+                                    value=args["value"]
+                                )
+                            except Exception as e:
+                                print(f"Error calling MCP tool: {e}")
+                                
                         actions.append(ControlAction(
                             zone=args["zone"],
                             setpoint_type=args["setpoint_type"],
@@ -159,6 +179,14 @@ class LLMAgent:
                         cooling_sp = 22.5
                         heating_sp = 21.5
             
+            # Load-bearing MCP Tool Routing for Fallback Engine
+            if set_zone_setpoint is not None:
+                try:
+                    set_zone_setpoint(zone=zone, setpoint_type="cooling_setpoint", value=cooling_sp)
+                    set_zone_setpoint(zone=zone, setpoint_type="heating_setpoint", value=heating_sp)
+                except Exception:
+                    pass
+
             actions.append(ControlAction(zone=zone, setpoint_type="cooling_setpoint", value=cooling_sp))
             actions.append(ControlAction(zone=zone, setpoint_type="heating_setpoint", value=heating_sp))
             
