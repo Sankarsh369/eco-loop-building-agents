@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+env/
+
+# Environment / secrets
+.env
+*.key
+
+# EnergyPlus run outputs
+*.audit
+*.bnd
+*.eio
+*.end
+*.err
+*.eso
+*.mtd
+*.mtr
+*.rdd
+*.shd
+*.mdd
+*.rvaudit
+*.sql
+eplusout*
+eplustbl*
+sqlite.err
+
+# Data / logs
+data/logs/*
+!data/logs/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Large media (track via Git LFS or link instead)
+video/*.mp4
+!video/.gitkeep

@@ -1,0 +1,23 @@
+# EnergyPlus bridging
+eppy>=0.5.63
+# pyenergyplus is shipped with EnergyPlus itself; add the path to your
+# EnergyPlus install's Python API folder to PYTHONPATH instead of pip-installing.
+
+# LLM / agent tooling
+openai>=1.0.0          # or swap for your local LLM client (ollama, llama-cpp-python, etc.)
+mcp>=1.0.0              # Model Context Protocol SDK
+
+# Data handling & dashboard
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+plotly>=5.20.0
+streamlit>=1.30.0        # optional, for the savings dashboard
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0
+requests>=2.31.0
+
+# Testing
+pytest>=8.0.0
