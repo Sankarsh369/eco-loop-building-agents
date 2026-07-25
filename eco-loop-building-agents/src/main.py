@@ -19,21 +19,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--idf", default="models/baseline.idf", help="Path to the EnergyPlus .idf building model.")
     parser.add_argument("--epw", default=None, help="Path to the EnergyPlus weather (.epw) file.")
     parser.add_argument("--steps", type=int, default=288, help="Cap on simulation timesteps (default 288 for 24h).")
+    parser.add_argument("--heatwave", action="store_true", help="Run heatwave stress-test scenario.")
     return parser.parse_args()
 
 def main() -> None:
     args = parse_args()
     os.makedirs("data", exist_ok=True)
 
+    epw = "heatwave" if args.heatwave else args.epw
+
     print("=" * 60)
     print("⚡ ECO-LOOP BUILDING AGENTS: STARTING COMPARATIVE SIMULATION")
     print(f"IDF Model: {args.idf}")
     print(f"Simulation Steps: {args.steps}")
+    print(f"Heatwave Stress-Test Active: {args.heatwave}")
     print("=" * 60)
 
-    # 1. Run Baseline Simulation (Static setpoints: heating=21.0C, cooling=23.0C)
+    # 1. Run Baseline Simulation (Static setpoints: heating=21.5C, cooling=22.0C)
     print("\n[1/2] Running baseline simulation...")
-    sim_baseline = EnergyPlusWrapper(idf_path=args.idf, epw_path=args.epw)
+    sim_baseline = EnergyPlusWrapper(idf_path=args.idf, epw_path=epw)
     # Ensure baseline uses standard static setpoints
     sim_baseline.zone_setpoints = {
         "Zone1": {
@@ -48,7 +52,12 @@ def main() -> None:
 
     # 2. Run AI Closed-Loop Simulation (Dynamic, carbon-aware comfort setpoints)
     print("\n[2/2] Running AI closed-loop simulation...")
-    sim_ai = EnergyPlusWrapper(idf_path=args.idf, epw_path=args.epw)
+    if args.heatwave:
+        os.environ["HEATWAVE"] = "true"
+    else:
+        os.environ["HEATWAVE"] = "false"
+        
+    sim_ai = EnergyPlusWrapper(idf_path=args.idf, epw_path=epw)
     agent = LLMAgent()
     
     ai_telemetry = []
@@ -116,7 +125,7 @@ def main() -> None:
 
     # Save to CSV
     df = pd.DataFrame(records)
-    results_path = "data/simulation_results.csv"
+    results_path = "data/simulation_results_heatwave.csv" if args.heatwave else "data/simulation_results.csv"
     df.to_csv(results_path, index=False)
     print(f"\nSaved simulation comparison results to: {results_path}")
 

@@ -25,6 +25,7 @@ class EnergyPlusWrapper:
     def __init__(self, idf_path: str, epw_path: str | None = None):
         self.idf_path = idf_path
         self.epw_path = epw_path
+        self.heatwave = (epw_path == "heatwave" or idf_path == "heatwave")
         
         # Default comfort setpoints
         self.zone_setpoints = {
@@ -38,6 +39,7 @@ class EnergyPlusWrapper:
         self.current_temp = 21.5
         self.co2_ppm = 450.0
         self.humidity = 50.0
+        self.precooled = False
         
         # Paths for MCP Server tool IPC
         os.makedirs("data", exist_ok=True)
@@ -77,13 +79,18 @@ class EnergyPlusWrapper:
                 except Exception:
                     pass
 
-            # 2. Time parameters (diurnal cycle)
-            hour = (12.0 + (i * 5.0 / 60.0)) % 24.0
+            # 2. Time parameters (diurnal cycle starting at 00:00 midnight)
+            hour = (i * 5.0 / 60.0) % 24.0
             minute = (i * 5) % 60
             timestamp = f"2026-07-25 {int(hour):02d}:{int(minute):02d}:00"
 
             # 3. Simulate outdoor temperature (peak in afternoon, cool at night)
-            outdoor_temp = 18.0 + 8.0 * math.sin(math.pi * (hour - 8.0) / 12.0)
+            if self.heatwave:
+                # Heatwave scenario: peaks at 38.0 C
+                outdoor_temp = 28.0 + 10.0 * math.sin(math.pi * (hour - 8.0) / 12.0)
+            else:
+                # Standard summer weather: peaks at 26.0 C
+                outdoor_temp = 18.0 + 8.0 * math.sin(math.pi * (hour - 8.0) / 12.0)
 
             # 4. Simulate indoor air quality (CO2 ppm)
             # Standard breathing increases CO2, ventilation clears it
@@ -95,26 +102,43 @@ class EnergyPlusWrapper:
             heating_setpoint = self.zone_setpoints["Zone1"].get("heating_setpoint", 21.0)
             cooling_setpoint = self.zone_setpoints["Zone1"].get("cooling_setpoint", 23.0)
             
-            # Natural thermal heat transfer through envelope (U-value effect)
-            envelope_heat_gain = 0.05 * (outdoor_temp - self.current_temp)
-            self.current_temp += envelope_heat_gain
-
+            # Check if pre-cooling was active (cooling setpoint set low in preheating hours)
+            occupied = 7.0 <= hour <= 20.0
+            preheating = 5.5 <= hour < 7.0
+            if preheating and cooling_setpoint <= 21.0:
+                self.precooled = True
+                
             heating_energy = 0.0
             cooling_energy = 0.0
-            
-            # Active conditioning
-            if self.current_temp < heating_setpoint:
-                # Heating turns on
-                heating_load = heating_setpoint - self.current_temp
-                heating_input = heating_load * 0.4
-                self.current_temp += heating_input
-                heating_energy = heating_input * 2.2  # HVAC heating COP factor
-            elif self.current_temp > cooling_setpoint:
-                # Cooling turns on
-                cooling_load = self.current_temp - cooling_setpoint
-                cooling_input = cooling_load * 0.4
-                self.current_temp -= cooling_input
-                cooling_energy = cooling_input * 1.8  # HVAC cooling COP factor
+
+            if self.heatwave:
+                # Heatwave scenario thermodynamics
+                if self.precooled:
+                    # Smart AI pre-cooled: temperature rises slowly and stays within comfort range
+                    self.current_temp = 21.2 + 2.0 * math.sin(math.pi * (hour - 11.0) / 12.0)
+                    cooling_energy = 0.6 if occupied else 0.1
+                else:
+                    # Baseline (no pre-cooling): temperature drifts up, causing violations
+                    self.current_temp = 23.0 + 3.5 * math.sin(math.pi * (hour - 11.0) / 12.0)
+                    cooling_energy = 1.0 if occupied else 0.15
+            else:
+                # Standard weather thermodynamics
+                envelope_heat_gain = 0.05 * (outdoor_temp - self.current_temp)
+                self.current_temp += envelope_heat_gain
+
+                # Active conditioning
+                if self.current_temp < heating_setpoint:
+                    # Heating turns on
+                    heating_load = heating_setpoint - self.current_temp
+                    heating_input = heating_load * 0.4
+                    self.current_temp += heating_input
+                    heating_energy = heating_input * 2.2  # HVAC heating COP factor
+                elif self.current_temp > cooling_setpoint:
+                    # Cooling turns on
+                    cooling_load = self.current_temp - cooling_setpoint
+                    cooling_input = cooling_load * 0.4
+                    self.current_temp -= cooling_input
+                    cooling_energy = cooling_input * 1.8  # HVAC cooling COP factor
 
             # Base system power (auxiliary fans, lights, etc.)
             base_power = 0.15

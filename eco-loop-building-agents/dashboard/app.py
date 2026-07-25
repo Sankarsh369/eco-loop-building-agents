@@ -68,17 +68,21 @@ st.markdown("""
 
 # App Title
 st.markdown("<h1 class='main-title'>⚡ Eco-Loop Building Agents</h1>", unsafe_allow_html=True)
-st.subheader("Closed-Loop Energy & Occupant Comfort Optimization")
+st.subheader(f"Closed-Loop Energy & Occupant Comfort Optimization — {scenario}")
 
 # Sidebar Controls
 st.sidebar.image("https://img.icons8.com/color/96/000000/green-home.png", width=80)
 st.sidebar.header("🛠️ Simulation Controls")
 
-CSV_PATH = "data/simulation_results.csv"
+scenario = st.sidebar.selectbox("Weather Scenario", ["Standard Weather", "Heatwave Stress-Test"])
+is_heatwave = (scenario == "Heatwave Stress-Test")
+CSV_PATH = "data/simulation_results_heatwave.csv" if is_heatwave else "data/simulation_results.csv"
 
-def run_simulation(steps):
+def run_simulation(steps, heatwave):
     st.sidebar.warning("Running building simulation...")
     cmd = ["python", "src/main.py", "--steps", str(steps)]
+    if heatwave:
+        cmd.append("--heatwave")
     try:
         subprocess.run(cmd, check=True)
         st.sidebar.success("Simulation finished successfully!")
@@ -89,7 +93,7 @@ def run_simulation(steps):
 sim_steps = st.sidebar.slider("Simulation Horizon (Steps)", min_value=12, max_value=288, value=288, step=12)
 
 if st.sidebar.button("🔄 Run New Simulation"):
-    run_simulation(sim_steps)
+    run_simulation(sim_steps, is_heatwave)
 
 st.sidebar.markdown("---")
 st.sidebar.info("""
@@ -109,8 +113,8 @@ if os.path.exists(CSV_PATH):
     except Exception as e:
         st.error(f"Error loading CSV results: {e}")
 else:
-    st.warning("⚠️ No simulation results found in `data/simulation_results.csv`. Running initial simulation now...")
-    run_simulation(288)
+    st.warning(f"⚠️ No simulation results found in `{CSV_PATH}`. Running initial simulation now...")
+    run_simulation(288, is_heatwave)
 
 if data_loaded:
     # Calculations
@@ -122,8 +126,15 @@ if data_loaded:
     total_ai_carbon = df['AI Carbon (g)'].sum()
     carbon_saved = ((total_baseline_carbon - total_ai_carbon) / total_baseline_carbon) * 100
     
-    baseline_comfort_violations = ((df['Baseline PMV'] < -0.5) | (df['Baseline PMV'] > 0.5)).sum()
-    ai_comfort_violations = ((df['AI PMV'] < -0.5) | (df['AI PMV'] > 0.5)).sum()
+    # Occupied comfort checks (7:00 AM to 8:00 PM)
+    try:
+        df['Hour'] = pd.to_datetime(df['Timestamp']).dt.hour + pd.to_datetime(df['Timestamp']).dt.minute / 60.0
+        occupied_mask = (df['Hour'] >= 7.0) & (df['Hour'] <= 20.0)
+    except Exception:
+        occupied_mask = pd.Series(True, index=df.index)
+        
+    baseline_comfort_violations = (((df['Baseline PMV'] < -0.5) | (df['Baseline PMV'] > 0.5)) & occupied_mask).sum()
+    ai_comfort_violations = (((df['AI PMV'] < -0.5) | (df['AI PMV'] > 0.5)) & occupied_mask).sum()
     
     # 4 metrics layout
     col1, col2, col3, col4 = st.columns(4)
