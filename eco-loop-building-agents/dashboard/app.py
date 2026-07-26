@@ -66,10 +66,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# App Title
-st.markdown("<h1 class='main-title'>⚡ Eco-Loop Building Agents</h1>", unsafe_allow_html=True)
-st.subheader(f"Closed-Loop Energy & Occupant Comfort Optimization — {scenario}")
-
 # Sidebar Controls
 st.sidebar.image("https://img.icons8.com/color/96/000000/green-home.png", width=80)
 st.sidebar.header("🛠️ Simulation Controls")
@@ -77,6 +73,10 @@ st.sidebar.header("🛠️ Simulation Controls")
 scenario = st.sidebar.selectbox("Weather Scenario", ["Standard Weather", "Heatwave Stress-Test"])
 is_heatwave = (scenario == "Heatwave Stress-Test")
 CSV_PATH = "data/simulation_results_heatwave.csv" if is_heatwave else "data/simulation_results.csv"
+
+# App Title
+st.markdown("<h1 class='main-title'>⚡ Eco-Loop Building Agents</h1>", unsafe_allow_html=True)
+st.subheader(f"Closed-Loop Energy & Occupant Comfort Optimization — {scenario}")
 
 def run_simulation(steps, heatwave):
     st.sidebar.warning("Running building simulation...")
