@@ -66,9 +66,7 @@ prove quantifiable energy and cost savings.
 4. **System Architecture Document** — short Markdown report explaining
    tool-calling architecture, prompt engineering strategy, and simulation
    logs.
-5. **PoC Demonstration Video** — max 3-minute recording showing the loop
-   in action, highlighting live data transfer from EnergyPlus to the LLM
-   and the resulting control actions being applied automatically.
+5. **PoC Demonstration Video** — Watch the [Loom PoC Demonstration Video](https://www.loom.com/share/64d0edbda82149529c16521392173ecb). Shows the operational closed-loop control system and Streamlit analytics dashboard.
 
 ## Evaluation Criteria
 

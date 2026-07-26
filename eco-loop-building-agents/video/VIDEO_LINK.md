@@ -1,8 +1,5 @@
-# PoC Demonstration Video
+# PoC Demonstration Video Link
 
-Video files are large — don't commit them directly to Git.
+You can watch the live 3-minute demonstration video of the Eco-Loop closed-loop MCP building control system and Streamlit dashboard here:
 
-Upload your max-3-minute demo video to YouTube (unlisted), Google Drive, or
-Git LFS, then paste the link here:
-
-- Demo video: <PASTE LINK HERE>
+👉 **[Eco-Loop Loom Demonstration Video](https://www.loom.com/share/64d0edbda82149529c16521392173ecb)**
