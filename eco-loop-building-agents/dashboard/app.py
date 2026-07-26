@@ -68,7 +68,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Sidebar Controls
-st.sidebar.image("https://img.icons8.com/color/96/000000/green-home.png", width=80)
+st.sidebar.markdown("<h2 style='color: #88c0d0; margin-bottom: 0px;'>🏢 Eco-Loop</h2>", unsafe_allow_html=True)
 st.sidebar.header("🛠️ Simulation Controls")
 
 scenario = st.sidebar.selectbox("Weather Scenario", ["Standard Weather", "Heatwave Stress-Test"])
