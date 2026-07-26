@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
+import sys
 import subprocess
 
 # Set page configuration with a premium look
@@ -80,11 +81,15 @@ st.subheader(f"Closed-Loop Energy & Occupant Comfort Optimization — {scenario}
 
 def run_simulation(steps, heatwave):
     st.sidebar.warning("Running building simulation...")
-    cmd = ["python", "src/main.py", "--steps", str(steps)]
+    # Use sys.executable to run main.py with the active virtual env interpreter
+    cmd = [sys.executable, "src/main.py", "--steps", str(steps)]
     if heatwave:
         cmd.append("--heatwave")
     try:
-        subprocess.run(cmd, check=True)
+        # Pass environment variables including UTF-8 settings to subprocess
+        env = os.environ.copy()
+        env["PYTHONUTF8"] = "1"
+        subprocess.run(cmd, check=True, env=env)
         st.sidebar.success("Simulation finished successfully!")
         st.rerun()
     except Exception as e:
@@ -114,7 +119,14 @@ if os.path.exists(CSV_PATH):
         st.error(f"Error loading CSV results: {e}")
 else:
     st.warning(f"⚠️ No simulation results found in `{CSV_PATH}`. Running initial simulation now...")
-    run_simulation(288, is_heatwave)
+    try:
+        run_simulation(288, is_heatwave)
+    except Exception as e:
+        st.error(f"Could not automatically run simulation: {e}")
+
+if not data_loaded:
+    st.info("💡 **Click 'Run New Simulation' in the sidebar to generate the comparative simulation results.**")
+    st.stop()
 
 if data_loaded:
     # Calculations
